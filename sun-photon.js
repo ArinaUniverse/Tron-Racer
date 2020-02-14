@@ -44,7 +44,7 @@ Then, run the migration with:
       userFeePercentage: 0,
       feeLimit: 1e8,
       mainFullHost: 'https://testhttpapi.tronex.io',
-      sideFullHost: 'http://127.0.0.1' + port,
+      sideFullHost: 'http://127.0.0.1:' + port,
       mainGateway: 'TFLtPoEtVJBMcj6kZPrQrwEdM3W3shxsBU',
       sideGateway: 'TRDepx5KoQ8oNbFVZ5sogwUxtdYmATDRgX',
       chainId: '',

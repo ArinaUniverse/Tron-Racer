@@ -104,22 +104,22 @@ contract race_base is cHorse, math{
         uint[] memory odds = new uint[](n);
 
         for (uint i = 0; i < rank.length; i++){
-            if(rank[i] == 0){
-                odds[i] = Random(110, 150);
-            }else if(rank[i] == 1){
-                odds[i] = Random(160, 200);
-            }else if(rank[i] == 2){
-                odds[i] = Random(210, 350);
-            }else if(rank[i] == 3){
-                odds[i] = Random(260, 450);
-            }else if(rank[i] == 4){
-                odds[i] = Random(310, 550);
-            }else if(rank[i] == 5){
-                odds[i] = Random(410, 750);
-            }else if(rank[i] == 6){
-                odds[i] = Random(610, 1000);
-            }else if(rank[i] == 7){
-                odds[i] = Random(810, 1500);
+            if(i == 0){
+                odds[rank[i]] = Random(110, 150);
+            }else if(i == 1){
+                odds[rank[i]] = Random(160, 200);
+            }else if(i == 2){
+                odds[rank[i]] = Random(210, 350);
+            }else if(i == 3){
+                odds[rank[i]] = Random(260, 450);
+            }else if(i == 4){
+                odds[rank[i]] = Random(310, 550);
+            }else if(i == 5){
+                odds[rank[i]] = Random(410, 750);
+            }else if(i == 6){
+                odds[rank[i]] = Random(610, 1000);
+            }else if(i == 7){
+                odds[rank[i]] = Random(810, 1500);
             }else{
                 revert("Odd error");
             }
