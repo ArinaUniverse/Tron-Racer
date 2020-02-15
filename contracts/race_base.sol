@@ -34,6 +34,8 @@ interface IHorse{
 
     function levelup(uint horseId) external;
 
+    function ownerOf(uint256 tokenId) external view returns (address);
+
 }
 
 contract cHorse is Manager{
@@ -48,6 +50,10 @@ contract cHorse is Manager{
         _horseAddr = addr;
     }
 
+    function ownerOf(uint256 tokenId) public view returns (address) {
+        return IHorse(horesAddr()).ownerOf(tokenId);
+    }
+
     function inqHorseBase(uint horseId) public view returns
     (uint8 avatar, uint8 DNA1, uint8 DNA2, bool gender){
         return IHorse(horesAddr()).inqHorseBase(horseId);
@@ -57,6 +63,11 @@ contract cHorse is Manager{
     (uint8 rank, uint8 speed, uint8 stamina, uint8 sprintForce){
         return (IHorse(horesAddr()).inqHorseAbility(horseId));
     }
+
+    // function inqHorseStatus(uint horseId) public view returns
+    // (uint8 RaceTimes, bool IsRetire, uint8 BreedingTimes, uint8 BreedingCoolTime){
+    //     return (IHorse(horesAddr()).inqHorseStatus(horseId));
+    // }
 }
 
 contract race_base is cHorse, math{
@@ -105,21 +116,21 @@ contract race_base is cHorse, math{
 
         for (uint i = 0; i < rank.length; i++){
             if(i == 0){
-                odds[rank[i]] = Random(110, 150);
+                odds[rank[i]] = Random(105, 130);
             }else if(i == 1){
-                odds[rank[i]] = Random(160, 200);
+                odds[rank[i]] = Random(115, 150);
             }else if(i == 2){
-                odds[rank[i]] = Random(210, 350);
+                odds[rank[i]] = Random(180, 250);
             }else if(i == 3){
-                odds[rank[i]] = Random(260, 450);
+                odds[rank[i]] = Random(200, 350);
             }else if(i == 4){
-                odds[rank[i]] = Random(310, 550);
+                odds[rank[i]] = Random(250, 450);
             }else if(i == 5){
-                odds[rank[i]] = Random(410, 750);
+                odds[rank[i]] = Random(310, 550);
             }else if(i == 6){
-                odds[rank[i]] = Random(610, 1000);
+                odds[rank[i]] = Random(510, 700);
             }else if(i == 7){
-                odds[rank[i]] = Random(810, 1500);
+                odds[rank[i]] = Random(610, 1500);
             }else{
                 revert("Odd error");
             }
@@ -128,12 +139,6 @@ contract race_base is cHorse, math{
         return odds;
 
     }
-
-    // function _gameInfo(address player) internal view returns(
-    //     uint16 raceDistance, uint value, uint8 horsesAmount, uint8 betNo){
-    //     uint8 _horsesAmount = uint8(games[player].horses.length);
-    //     return (games[player].raceDistance, games[player].value, _horsesAmount, games[player].betNo);
-    // }
 
     function _endRace(uint horseId, bool win, uint8 typ) internal{
         IHorse(horesAddr()).horseResult(horseId, typ, win);
@@ -160,5 +165,22 @@ contract race_base is cHorse, math{
         require(NO <= horseAmount || NO != 0, "No number error");
         return games[player].horses[NO.sub(1)];
     }
+
+    // function inqRaceHorsesBase(address player, uint8 NO) public view returns(
+    //     uint8 avatar, uint8 DNA1, uint8 DNA2, bool gender){
+    //     uint horseAmount = games[player].horses.length;
+    //     require(NO <= horseAmount || NO != 0, "No number error");
+    //     uint horseId = inqRaceHorsesId(player, NO);
+    //     return inqHorseBase(horseId);
+    // }
+
+    // function inqRaceHorsesAbility(address player, uint8 NO) public view returns(
+    //     uint8 rank, uint8 speed, uint8 stamina, uint8 sprintForce){
+    //     uint horseAmount = games[player].horses.length;
+    //     require(NO <= horseAmount || NO != 0, "No number error");
+    //     uint horseId = inqRaceHorsesId(player, NO);
+    //     return inqHorseAbility(horseId);
+    // }
+
 
 }

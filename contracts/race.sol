@@ -81,7 +81,7 @@ contract race is race_base{
 //=========================Play game function======================
 
     function generateRace(uint trackLength, uint horseId) external{
-
+        //require((ownerOf(horseId) == msg.sender) || (horseId == 0), "You can't use this horse.");
         uint distance;
         if(trackLength == 1){
             distance = 1200;
@@ -96,7 +96,6 @@ contract race is race_base{
         }
 
         uint[] memory newHorses = new uint[](8);
-
         horsesTime[msg.sender].init;
 
         uint r = Random(0, 7);

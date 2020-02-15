@@ -123,12 +123,12 @@ contract horseContract is Manager, ERC721{
         h.s = s;
     }
 
-    function _set_history(horse storage h, history memory his) internal{
-        if(!h.i.status){
-            h.i.status = true;
-        }
-        h.h = his;
-    }
+    // function _set_history(horse storage h, history memory his) internal{
+    //     if(!h.i.status){
+    //         h.i.status = true;
+    //     }
+    //     h.h = his;
+    // }
 
 ////////////////////////////////_init////////////////////////////////////
 
@@ -203,18 +203,20 @@ contract horseContract is Manager, ERC721{
         uint SalePrice;
         ability memory a = _horseAbility(horseId);
         uint RateA = (uint(a.speed).mul(5)).add(uint(a.stamina).mul(2)).add(uint(a.sprintForce).mul(5)/10);
+        bool isforsale = true;
         if(a.speed >= 80){
-            SalePrice = RateA.mul(3);
+            SalePrice = RateA.mul(6);
+            isforsale = false;
         }else if(a.speed >= 70 && a.speed < 80){
-            SalePrice = RateA.mul(2);
+            SalePrice = RateA.mul(5);
         }else if(a.speed >= 60 && a.speed < 70){
-            SalePrice = RateA.mul(1);
+            SalePrice = RateA.mul(4);
         }else if(a.speed >= 50 && a.speed < 60){
-            SalePrice = RateA.mul(2);
+            SalePrice = RateA.mul(3);
         }else{
-            SalePrice = RateA/5;
+            SalePrice = RateA.mul(2);
         }
-        return record(0, 0, 0, SalePrice, true);
+        return record(0, 0, 0, SalePrice, isforsale);
     }
 
     function _init_RaceTimes(uint horseId) private pure returns(uint8){
@@ -338,6 +340,7 @@ contract horseContract is Manager, ERC721{
     }
 
     function _levelup(uint horseId) private {
+        //require(condition, message);
         ability memory a = _horseAbility(horseId);
         if(a.rank < 50){
             uint r = rand()%3;
@@ -419,6 +422,7 @@ contract horseContract is Manager, ERC721{
             uint8(N_DNA_Stamina.add(uint8(Random(0, N_RDNA)))), //stamina
             uint8(Random(N_RDNA, 10)) //sprintForce
             );
+            //check(N_DNA_Speed, N_DNA_Stamina);
 
         base memory b = base(
             uint8(Random(1, 20)), //avatar
@@ -474,6 +478,10 @@ contract horseContract is Manager, ERC721{
     function BuyHorse(uint horseId) public payable{
         require(msg.value == _horseRecord(horseId).SalePrice*(10**6), "Value is not match");
         _transferFrom(address(this), msg.sender, horseId);
+        record storage r = horses[horseId].r;
+        r.IsForSale = false;
+        r.SalePrice = _horseRecord(horseId).SalePrice.mul(3)/2;
+
     }
 
     function setSalePrice(uint horseId, uint SalePrice) external{
@@ -488,5 +496,10 @@ contract horseContract is Manager, ERC721{
         status memory s = _horseStatus(horseId);
         s.IsRetire = true;
         _set_status(horses[horseId], s);
+    }
+
+    function setForSale(uint horseId, bool isForSale) external{
+        require(ownerOf(horseId) == msg.sender, "You are not owner");
+        horses[horseId].r.IsForSale = isForSale;
     }
 }
