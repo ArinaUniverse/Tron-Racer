@@ -3,7 +3,7 @@ pragma solidity >=0.5.0 <0.6.0;
 import "./race_base.sol";
 
 library useDecimal{
-    using SafeMath for uint;
+    using uintTool for uint;
 
     function m278(uint n) internal pure returns(uint){
         return n.mul(278)/1000;
@@ -72,7 +72,7 @@ library raceTime {
 }
 
 contract race is race_base{
-    using SafeMath for uint;
+    using uintTool for uint;
     using useDecimal for uint;
     using raceTime for raceTime.horsesTime;
 
@@ -81,7 +81,9 @@ contract race is race_base{
 //=========================Play game function======================
 
     function generateRace(uint trackLength, uint horseId) external{
-        //require((ownerOf(horseId) == msg.sender) || (horseId == 0), "You can't use this horse.");
+        (, bool IsRetire, uint8 BreedingTimes,,) = inqHorseStatus(horseId);
+        require(!IsRetire || BreedingTimes >= 0, "This horse can't join race");
+        require((ownerOf(horseId) == msg.sender) || (horseId == 0), "You can't use this horse");
         uint distance;
         if(trackLength == 1){
             distance = 1200;
@@ -96,9 +98,12 @@ contract race is race_base{
         }
 
         uint[] memory newHorses = new uint[](8);
+        // horsesTime[msg.sender].set(1, newHorses);
+        // horsesTime[msg.sender].set(2, newHorses);
+        // horsesTime[msg.sender].set(3, newHorses);
         horsesTime[msg.sender].init;
 
-        uint r = Random(0, 7);
+        uint r = rand(0, 7);
         
         for (uint8 i = 0; i < 8; i++) {
             
@@ -121,11 +126,11 @@ contract race is race_base{
         require(NO <= horseAmount || NO != 0, "No number error");
 
         require(games[msg.sender].raceDistance != 0, "You need to call generateRace first");
-        require(msg.value >= 1 trx && msg.value <= 100 trx,"Value error");
+        require(msg.value >= 50 trx && msg.value <= 1000 trx, "Value error");
 
         games[msg.sender].betNo = NO;
         games[msg.sender].value = msg.value;
-        games[msg.sender].randSeed = rand();
+        games[msg.sender].randSeed = rand(0, 1.15e77);
         games[msg.sender].blockNumber = block.number;
         horsesTime[msg.sender].set(1, _calculateTime(msg.sender, 1));
     }
@@ -195,6 +200,24 @@ contract race is race_base{
             return _calculateTime(player, index);
         }
     }
+
+    // function ttt(address player) public view returns(uint[] memory){
+    //     uint amount = games[player].horses.length;
+    //     // uint trackLength = D2LT(games[player].raceDistance);
+    //     // uint8 gameTyp = 0; //一般賽
+
+    //     uint[] memory totHorseTime = new uint[](amount);
+        
+    //     for (uint i = 1; i <= 3; i++) {
+    //         if(horsesTime[player].check(i)){
+    //             totHorseTime = arrayAdd(totHorseTime, horsesTime[player].inquire(i));
+    //         }else{
+    //             totHorseTime = arrayAdd(totHorseTime, _calculateTime(player, i));
+    //         }
+            
+    //     }
+    //     return totHorseTime;
+    // }
 
     function _raceRank(address player) private view returns(uint[] memory){
         uint amount = games[player].horses.length;

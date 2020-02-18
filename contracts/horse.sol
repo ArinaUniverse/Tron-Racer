@@ -1,14 +1,121 @@
 pragma solidity >=0.5.1 <0.6.0;
+// pragma experimental ABIEncoderV2;
 
 import "./ERC721.sol";
 import "./Manager.sol";
+
+library Horses {
+
+    struct Horse{
+        Ability ability;
+        Base base;
+        Record record;
+        Status status;
+        History history;
+        Initial initial;
+    }
+
+    struct Initial{
+        bool ability;
+        bool base;
+        bool record;
+        bool status;
+    }
+
+    struct Ability{
+        uint8 rank; //等級,會隨場次增加
+        uint8 speed; //速度
+        uint8 stamina; //耐力
+        uint8 sprintForce; //衝刺力
+    }
+
+    struct Base{
+        uint8 avatar; //馬外觀
+        uint8 DNA1;
+        uint8 DNA2;
+        bool gender; //性別
+    }
+
+    struct Record{
+        uint bloodlineA; //紀錄該馬的父馬編號(創世馬皆為0)
+        uint bloodlineB; //紀錄該馬的母馬編號(創世馬皆為0)
+
+        uint salePrice;  //出售價格 生成時有一個初始值公式,也可以透過命令自行修改
+        bool isForSale;  //創世馬預設為True, true=可以直接購買 /false=不販售
+        uint studFee; //公馬配種費用,玩家可以自行設定,0為不開放配種(預設),設定0以上費用,所有玩家都可以付費配種
+    }
+
+    struct Status{
+        uint8 raceTimes; //可參與比賽次數,會隨每場比賽-1(initial:11~100)
+        bool isRetire; //是否退役，初始值為false，選擇退役後則為true，退役後才能配種
+        uint8 breedingTimes; //公馬、母馬可配種次數，歸零後便無法配種(initial:1~10)
+        uint8 breedingCoolTime; //配種冷卻時間，母馬配種後需24小時冷卻(公馬沒有冷卻時間)
+        uint exp;
+    }
+
+    struct History{
+        uint16 G1_Win;  //初始值為0
+        uint16 G2_Win;  //初始值為0
+        uint16 G3_Win;  //初始值為0
+        uint16 normal_Win;  //初始值為0
+        uint16 race_Lose;  //初始值為0
+    }
+
+/////////////////////////////////_set////////////////////////////////////
+
+    function set_ability(Horse storage h, Ability memory ability) internal{
+
+        if(!h.initial.ability){
+            h.initial.ability = true;
+        }
+        h.ability = ability;
+    }
+
+    function _set_base(Horse storage h, Base memory base) internal{
+
+        if(!h.initial.base){
+            h.initial.base = true;
+        }
+        h.base = base;
+    }
+
+    function set_record(Horse storage h, Record memory record) internal{
+
+        if(!h.initial.record){
+            h.initial.record = true;
+        }
+        h.record = record;
+    }
+
+    function set_status(Horse storage h, Status memory status) internal{
+        if(!h.initial.status){
+            h.initial.status = true;
+        }
+        h.status = status;
+    }
+
+    // function set_history(Horse storage h, History memory history) internal{
+    //     if(!h.initial.status){
+    //         h.initial.status = true;
+    //     }
+    //     h.history = history;
+    // }
+}
 
 /*====================================================================================
                                 Horse Contract
 ====================================================================================*/
 
+contract newHorse is Manager, ERC721{
 
-contract horseContract is Manager, ERC721{
+    using Horses for Horses.Horse;
+    using Horses for Horses.Ability;
+    using Horses for Horses.Base;
+    using Horses for Horses.Record;
+    using Horses for Horses.Status;
+    using Horses for Horses.History;
+
+    mapping (uint => Horses.Horse) horses;
 
     using Address for address;
     uint createId;
@@ -19,6 +126,11 @@ contract horseContract is Manager, ERC721{
     constructor() public{
         createId = initAmount.add(1);
         _ownedTokensCount[address(this)].setBalance(1000000);
+    }
+
+    modifier onlyHorseOwner(uint horseId){
+        require(ownerOf(horseId) == msg.sender, "You are not owner of the horse");
+        _;
     }
 
     function setRace(address _address) public onlyManager{
@@ -35,367 +147,291 @@ contract horseContract is Manager, ERC721{
         _;
     }
 
-    mapping (uint => horse) horses;
-
-    struct horse{
-        ability a;
-        base b;
-        record r;
-        status s;
-        history h;
-        initial i;
+    function linearTransfrom(uint oringinMax, uint nowMax, uint number) private pure returns(uint){
+        return number.mul(nowMax).div(oringinMax);
     }
-
-    struct initial{
-        bool ability;
-        bool base;
-        bool record;
-        bool status;
-    }
-
-    struct ability{
-        uint8 rank; //等級,會隨場次增加
-        uint8 speed; //速度
-        uint8 stamina; //
-        uint8 sprintForce; //
-    }
-
-    struct base{
-        uint8 avatar; //馬外觀
-        uint8 DNA1;
-        uint8 DNA2;
-        bool gender; //性別
-    }
-
-    struct record{
-        uint StudFee; //公馬配種費用,玩家可以自行設定,0為不開放配種(預設),設定0以上費用,所有玩家都可以付費配種
-        uint BloodlineA; //紀錄該馬的父馬編號(創世馬皆為0)
-        uint BloodlineB; //紀錄該馬的母馬編號(創世馬皆為0)
-        uint SalePrice;  //出售價格 生成時有一個初始值公式,也可以透過命令自行修改
-        bool IsForSale;  //創世馬預設為True /true=可以直接購買 /false=不販售
-    }
-
-    struct status{
-        uint8 RaceTimes; //可參與比賽次數,會隨每場比賽-1(initial:11~100)
-        bool IsRetire; //是否退役，初始值為false，選擇退役後則為true，退役後才能配種
-        uint8 BreedingTimes; //公馬/母馬可配種次數，歸零後便無法配種(initial:1~10)
-        uint8 BreedingCoolTime; //配種冷卻時間，母馬配種後需24小時冷卻(公馬沒有冷卻時間)
-    }
-
-    struct history{
-        uint16 G1_Win;  //初始值為0
-        uint16 G2_Win;  //初始值為0
-        uint16 G3_Win;  //初始值為0
-        uint16 Normal_Win;  //初始值為0
-        uint16 Race_Lose;  //初始值為0
-    }
-
-/////////////////////////////////_set////////////////////////////////////
-
-    function _set_ability(horse storage h, ability memory a) internal{
-
-        if(!h.i.ability){
-            h.i.ability = true;
-        }
-        h.a = a;
-    }
-
-    function _set_base(horse storage h, base memory b) internal{
-
-        if(!h.i.base){
-            h.i.base = true;
-        }
-        h.b = b;
-    }
-
-    function _set_record(horse storage h, record memory r) internal{
-
-        if(!h.i.record){
-            h.i.record = true;
-        }
-        h.r = r;
-    }
-
-    function _set_status(horse storage h, status memory s) internal{
-        if(!h.i.status){
-            h.i.status = true;
-        }
-        h.s = s;
-    }
-
-    // function _set_history(horse storage h, history memory his) internal{
-    //     if(!h.i.status){
-    //         h.i.status = true;
-    //     }
-    //     h.h = his;
-    // }
-
+    
 ////////////////////////////////_init////////////////////////////////////
 
-    function _init_horseBase(uint horseId) private pure returns(base memory){
-        bytes32 seed = keccak256(abi.encodePacked(horseId, "horseBase"));
-        uint8 avatar = range8(uint8(seed[1]), 1, 20);
-        uint8 DNA1 = range8(uint8(seed[3]), 0, 10);
-        uint8 DNA2 = range8(uint8(seed[5]), 0, 10);
-        bool gender = range8(uint8(seed[7]), 0, 9) >= 5;
-
-        return base(avatar, DNA1, DNA2, gender);
+    function _initBase(uint horseId) private pure returns(Horses.Base memory){
+        return Horses.Base(
+            toUint8(rand(abi.encodePacked(horseId, "avatar"), 1, 20)), //avatar
+            toUint8(rand(abi.encodePacked(horseId, "DNA1"), 0, 10)), //DNA1
+            toUint8(rand(abi.encodePacked(horseId, "DNA2"), 0, 10)), //DNA2
+            rand(abi.encodePacked(horseId, "gender"), 0, 9) > 4 //gender
+            );
     }
 
-    function _init_horseAbility(uint horseId) private pure returns(ability memory){
-        bytes32 seed = keccak256(abi.encodePacked(horseId, "horseAbility"));
+    function _initAbility(uint horseId) private pure returns(Horses.Ability memory){
 
-        uint8 _speed = range8(uint8(seed[2]), 50, 100);
-        uint8 _stamina = range8(uint8(seed[4]), 20, 100);
-        uint8 _sprintForce = range8(uint8(seed[6]), 0, 10);
+        uint _speed = rand(abi.encodePacked(horseId, "speed"), 50, 100);
+        uint _stamina = rand(abi.encodePacked(horseId, "stamina"), 20, 100);
+        uint _sprintForce = rand(abi.encodePacked(horseId, "sprint"), 0, 10);
 
-        uint8 RaceTimes = _init_RaceTimes(horseId);
+        uint raceTimes = _init_raceTimes(horseId);
 
-        if(11 <= RaceTimes || RaceTimes <= 20){
+        if(11 <= raceTimes || raceTimes <= 20){
             _speed = _speed.add(9);
             _stamina = _stamina.add(9);
-        }else if(21 <= RaceTimes || RaceTimes <= 30){
+        }else if(21 <= raceTimes || raceTimes <= 30){
             _speed = _speed.add(8);
             _stamina = _stamina.add(8);
-        }else if(31 <= RaceTimes || RaceTimes <= 40){
+        }else if(31 <= raceTimes || raceTimes <= 40){
             _speed = _speed.add(7);
             _stamina = _stamina.add(7);
-        }else if(41 <= RaceTimes || RaceTimes <= 50){
+        }else if(41 <= raceTimes || raceTimes <= 50){
             _speed = _speed.add(6);
             _stamina = _stamina.add(6);
-        }else if(51 <= RaceTimes || RaceTimes <= 60){
+        }else if(51 <= raceTimes || raceTimes <= 60){
             _speed = _speed.add(5);
             _stamina = _stamina.add(5);
-        }else if(61 <= RaceTimes || RaceTimes <= 70){
+        }else if(61 <= raceTimes || raceTimes <= 70){
             _speed = _speed.add(4);
             _stamina = _stamina.add(4);
-        }else if(71 <= RaceTimes || RaceTimes <= 80){
+        }else if(71 <= raceTimes || raceTimes <= 80){
             _speed = _speed.add(3);
             _stamina = _stamina.add(3);
-        }else if(81 <= RaceTimes || RaceTimes <= 90){
+        }else if(81 <= raceTimes || raceTimes <= 90){
             _speed = _speed.add(2);
             _stamina = _stamina.add(2);
-        }else if(91 <= RaceTimes || RaceTimes <= 100){
+        }else if(91 <= raceTimes || raceTimes <= 100){
             _speed = _speed.add(1);
             _stamina = _stamina.add(1);
         }
         
-        uint8 sum = _speed.add(_stamina).add(_sprintForce);
-        uint8 rank = 0;
+        uint sum = _speed.add(_stamina).add(_sprintForce);
 
         if(_speed > 70){
-            uint8 speed = uint8(linearTransfrom(sum, 110, uint(_speed)));
-            uint8 stamina = uint8(linearTransfrom(sum, 110, uint(_stamina)));
-            uint8 sprintForce = uint8(linearTransfrom(sum, 110, uint(_sprintForce)));
-            return ability(rank, speed, stamina, sprintForce);
+            uint speed = linearTransfrom(sum, 110, uint(_speed));
+            uint stamina = linearTransfrom(sum, 110, uint(_stamina));
+            uint sprintForce = linearTransfrom(sum, 110, uint(_sprintForce));
+            return Horses.Ability(0, toUint8(speed), toUint8(stamina),
+                toUint8(sprintForce));
+
         }else if(sum > 120){
-            uint8 speed = uint8(linearTransfrom(sum, 120, uint(_speed)));
-            uint8 stamina = uint8(linearTransfrom(sum, 120, uint(_stamina)));
-            uint8 sprintForce = uint8(linearTransfrom(sum, 120, uint(_sprintForce)));
-            return ability(rank, speed, stamina, sprintForce);
+            uint speed = linearTransfrom(sum, 120, uint(_speed));
+            uint stamina = linearTransfrom(sum, 120, uint(_stamina));
+            uint sprintForce = linearTransfrom(sum, 120, uint(_sprintForce));
+
+            return Horses.Ability(0, toUint8(speed), toUint8(stamina), toUint8(sprintForce));
         }
         else{
-            return ability(rank, _speed, _stamina, _sprintForce);
+            return Horses.Ability(0, toUint8(_speed), toUint8(_stamina), toUint8(_sprintForce));
         }
     }
 
-    function _init_horseRecord(uint horseId) private view returns(record memory){
-        uint SalePrice;
-        ability memory a = _horseAbility(horseId);
-        uint RateA = (uint(a.speed).mul(5)).add(uint(a.stamina).mul(2)).add(uint(a.sprintForce).mul(5)/10);
-        bool isforsale = true;
+    function _initRecord(uint horseId) private view returns(Horses.Record memory){
+        uint salePrice;
+        Horses.Ability memory a = horseAbility(horseId);
+        uint rateA = (uint(a.speed).mul(5)).add(uint(a.stamina).mul(2)).add(uint(a.sprintForce).mul(5)/10);
+        bool isForSale = true;
         if(a.speed >= 80){
-            SalePrice = RateA.mul(6);
-            isforsale = false;
+            salePrice = rateA.mul(6);
+            isForSale = false;
         }else if(a.speed >= 70 && a.speed < 80){
-            SalePrice = RateA.mul(5);
+            salePrice = rateA.mul(5);
+            isForSale = false;
         }else if(a.speed >= 60 && a.speed < 70){
-            SalePrice = RateA.mul(4);
+            salePrice = rateA.mul(4);
         }else if(a.speed >= 50 && a.speed < 60){
-            SalePrice = RateA.mul(3);
+            salePrice = rateA.mul(3);
         }else{
-            SalePrice = RateA.mul(2);
+            salePrice = rateA.mul(2);
         }
-        return record(0, 0, 0, SalePrice, isforsale);
+        return Horses.Record(0, 0, salePrice, true, salePrice/10);
     }
 
-    function _init_RaceTimes(uint horseId) private pure returns(uint8){
-        bytes32 seed = keccak256(abi.encodePacked(horseId, "horseStatus"));
-        return range8(uint8(seed[2]), 11, 100);
+    function _initStatus(uint horseId) private view returns(Horses.Status memory){
+        uint8 breedingTimes;
+        if(_initBase(horseId).gender){
+            breedingTimes = uint8(rand(20, 100));
+        }else{
+            breedingTimes = uint8(rand(1, 10));
+        }
+        return Horses.Status(_init_raceTimes(horseId), false, breedingTimes, 0, 0);
     }
 
-    function _init_horseStatus(uint horseId) private view returns(status memory){
-        uint8 BreedingTimes;
-        if(_init_horseBase(horseId).gender){
-            BreedingTimes = uint8(Random(20, 100));
-        }else{
-            BreedingTimes = uint8(Random(1, 10));
-        }
-        return status(_init_RaceTimes(horseId), false, BreedingTimes, 0);
+    function _init_raceTimes(uint horseId) private pure returns(uint8){
+            bytes memory seed = abi.encodePacked(horseId);
+            uint raceTime = rand(seed, 11, 100);
+            return toUint8(raceTime);
     }
+
     
 ////////////////////////////////inquire//////////////////////////////////
     
-    function _horseAbility(uint horseId) internal view returns(ability memory){
-        require(_exist(horseId), "Horse is not exist");
-        if(!horses[horseId].i.ability && horseId <= initAmount){
-            return _init_horseAbility(horseId);
+    function horseAbility(uint horseId) private view returns(Horses.Ability memory){
+        //require(exist(horseId), "Horse is not exist");
+        if(!horses[horseId].initial.ability && horseId <= initAmount){
+            return _initAbility(horseId);
         }else{
-            return horses[horseId].a;
+            return horses[horseId].ability;
         }
     }
 
-    function _horseBase(uint horseId) internal view returns(base memory){
-        require(_exist(horseId), "Horse is not exist");
-        if(!horses[horseId].i.base && horseId <= initAmount){
-            return _init_horseBase(horseId);
+    function horseBase(uint horseId) private view returns(Horses.Base memory){
+        //require(exist(horseId), "Horse is not exist");
+        if(!horses[horseId].initial.base && horseId <= initAmount){
+            return _initBase(horseId);
         }else{
-            return horses[horseId].b;
+            return horses[horseId].base;
         }
     }
 
-    function _horseRecord(uint horseId) internal view returns(record memory){
-        require(_exist(horseId), "Horse is not exist");
-        if(!horses[horseId].i.record && horseId <= initAmount){
-            return _init_horseRecord(horseId);
+    function horseRecord(uint horseId) private view returns(Horses.Record memory){
+        //require(exist(horseId), "Horse is not exist");
+        if(!horses[horseId].initial.record && horseId <= initAmount){
+            return _initRecord(horseId);
         }else{
-            return horses[horseId].r;
+            return horses[horseId].record;
         }
     }
 
-    function _horseStatus(uint horseId) internal view returns(status memory){
-        require(_exist(horseId), "Horse is not exist");
-        if(!horses[horseId].i.status && horseId <= initAmount){
-            return _init_horseStatus(horseId);
+    function horseStatus(uint horseId) private view returns(Horses.Status memory){
+        //require(exist(horseId), "Horse is not exist");
+        if(!horses[horseId].initial.status && horseId <= initAmount){
+            return _initStatus(horseId);
         }else{
-            return horses[horseId].s;
+            return horses[horseId].status;
         }
     }
 
-    function _horseHistory(uint horseId) internal view returns(history memory){
-        require(_exist(horseId), "Horse is not exist");
-        return horses[horseId].h;
+    function horseHistory(uint horseId) private view returns(Horses.History memory){
+        //require(exist(horseId), "Horse is not exist");
+        return horses[horseId].history;
     }
+
+    ////////////////////external inquire/////////////////////
 
     function inqHorseAbility(uint horseId) external view returns
     (uint8 rank, uint8 speed, uint8 stamina, uint8 sprintForce){
-        ability memory a = _horseAbility(horseId);
+        Horses.Ability memory a = horseAbility(horseId);
         return (a.rank, a.speed, a.stamina, a.sprintForce);
     }
 
     function inqHorseBase(uint horseId) external view returns
     (uint8 avatar, uint8 DNA1, uint8 DNA2, bool gender){
-        base memory b = _horseBase(horseId);
+        Horses.Base memory b = horseBase(horseId);
         return(b.avatar, b.DNA1, b.DNA2, b.gender);
     }
 
     function inqHorseRecord(uint horseId) external view returns
-    (uint StudFee, uint BloodlineA, uint BloodlineB, uint SalePrice, bool IsForSale){
-        record memory r = _horseRecord(horseId);
-        return(r.StudFee, r.BloodlineA, r.BloodlineB, r.SalePrice, r.IsForSale);
+    (uint studFee, uint bloodlineA, uint bloodlineB, uint salePrice, bool isForSale){
+        Horses.Record memory r = horseRecord(horseId);
+        return(r.studFee, r.bloodlineA, r.bloodlineB, r.salePrice, r.isForSale);
     }
 
     function inqHorseStatus(uint horseId) external view returns
-    (uint8 RaceTimes, bool IsRetire, uint8 BreedingTimes, uint8 BreedingCoolTime){
-        status memory s = _horseStatus(horseId);
-        return(s.RaceTimes, s.IsRetire, s.BreedingTimes, s.BreedingCoolTime);
+    (uint8 raceTimes, bool isRetire, uint8 breedingTimes, uint8 breedingCoolTime, uint exp){
+        Horses.Status memory s = horseStatus(horseId);
+        return(s.raceTimes, s.isRetire, s.breedingTimes, s.breedingCoolTime, s.exp);
     }
 
     function inqHorseHistory(uint horseId) external view returns
-    (uint16 G1_Win, uint16 G2_Win, uint16 G3_Win, uint16 Normal_Win, uint16 Race_Lose){
-        history memory h = _horseHistory(horseId);
-        return(h.G1_Win, h.G2_Win, h.G3_Win, h.Normal_Win, h.Race_Lose);
+    (uint16 G1_Win, uint16 G2_Win, uint16 G3_Win, uint16 normal_Win, uint16 race_Lose){
+        Horses.History memory h = horseHistory(horseId);
+        return(h.G1_Win, h.G2_Win, h.G3_Win, h.normal_Win, h.race_Lose);
     }
 
-    function _exist(uint horseId) public view returns(bool){
-        return createId >= horseId;
+    function exist(uint horseId) public view returns(bool){
+        return ownerOf(horseId) != address(0);
     }
 
 ////////////////////////////only Race////////////////////////////////////
 
     function horseResult(uint horseId, uint8 typ, bool win) public onlyRace{
-        history storage h = horses[horseId].h;
+
+        Horses.Status memory hs = horseStatus(horseId);
+        
+        if(horseAbility(horseId).speed >= 70){
+            hs.raceTimes = toUint8(uint(hs.raceTimes).sub(2));
+        }else{
+            hs.raceTimes = toUint8(uint(hs.raceTimes).sub(1));
+        }//扣除RaceTimes
+
+        horses[horseId].set_status(hs);
+
+        Horses.History storage h = horses[horseId].history;
+
         if(win){
-            _levelup(horseId);
+            horses[horseId].status.exp = horses[horseId].status.exp.add(100);
         }
         if(typ == 0){
             if(win){
-                h.Normal_Win = h.Normal_Win.add(1);
+                h.normal_Win = toUint16(uint(h.normal_Win).add(1));
             }else{
-                h.Race_Lose = h.Race_Lose.add(1);
+                h.race_Lose = toUint16(uint(h.race_Lose).add(1));
             }
         }else if(typ == 1){
             if(win){
-                h.G1_Win = h.G1_Win.add(1);
+                h.G1_Win = toUint16(uint(h.G1_Win).add(1));
             }
         }else if(typ == 2){
             if(win){
-                h.G2_Win = h.G2_Win.add(1);
+                h.G2_Win = toUint16(uint(h.G2_Win).add(1));
             }
         }else if(typ == 3){
             if(win){
-                h.G3_Win = h.G3_Win.add(1);
+                h.G3_Win = toUint16(uint(h.G3_Win).add(1));
             }
         }
     }
 
-    function _levelup(uint horseId) private {
-        //require(condition, message);
-        ability memory a = _horseAbility(horseId);
+    function _levelup(uint horseId) private{
+        Horses.Ability memory a = horseAbility(horseId);
         if(a.rank < 50){
-            uint r = rand()%3;
+            uint r = rand(1,3);
             if(r == 0){
-                _set_ability(horses[horseId], ability(
-                    a.rank.add(1), a.speed.add(1), a.stamina, a.sprintForce));
+                horses[horseId].set_ability(Horses.Ability(
+                    toUint8(uint(a.rank).add(1)), toUint8(uint(a.speed).add(1)), a.stamina, a.sprintForce));
             }else if(r == 1){
-                _set_ability(horses[horseId], ability(
-                    a.rank.add(1), a.speed, a.stamina.add(1), a.sprintForce));
+                horses[horseId].set_ability(Horses.Ability(
+                    toUint8(uint(a.rank).add(1)), a.speed, toUint8(uint(a.stamina).add(1)), a.sprintForce));
             }else if(r == 2){
-                _set_ability(horses[horseId], ability(
-                    a.rank.add(1), a.speed, a.stamina, a.sprintForce.add(1)));
+                horses[horseId].set_ability(Horses.Ability(
+                    toUint8(uint(a.rank).add(1)), a.speed, a.stamina, toUint8(uint(a.sprintForce).add(1))));
             }else{
                 revert("rand error");
             }
         }
     }
 
-///////////////////////////other function///////////////////////////////
+// ///////////////////////////other function///////////////////////////////
 
-    function createHorse(uint MareId, uint StallionId) external onlyManager{
-        _CreateHorse(MareId, StallionId);
+    function createHorse(uint mareId, uint stallionId) external onlyManager{
+        _createHorse(mareId, stallionId);
     }
 
-    function _generateHorse(ability memory a, base memory b, record memory r, status memory s) private{
+    function _generateHorse(Horses.Ability memory ability, Horses.Base memory base,
+        Horses.Record memory record, Horses.Status memory status) private{
 
         _mint(msg.sender, createId);
 
-        horses[createId].a = a;
-        horses[createId].b = b;
-        horses[createId].r = r;
-        horses[createId].s = s;
+        horses[createId].ability = ability;
+        horses[createId].base = base;
+        horses[createId].record = record;
+        horses[createId].status = status;
 
         createId = createId.add(1);
 
     }
 
-    function _CreateHorse(uint MareId, uint StallionId) private{
+    function _createHorse(uint mareId, uint stallionId) private{
 
-        uint8 N_DNA_Speed = uint8(_parent_speed(MareId)
-            .add(_parent_speed(StallionId))).div(2);
+        uint N_DNA_Speed = ( _parent_speed(mareId).add(_parent_speed(stallionId)) )/2;
 
-        uint8 N_DNA_Stamina = uint8(_parent_stamina(MareId)
-            .add(_parent_stamina(StallionId))).div(2);
+        uint N_DNA_Stamina = ( _parent_stamina(mareId).add(_parent_stamina(stallionId)) )/2;
 
         //一半機率來自公馬或母馬
 
-        history memory h;
-        if(rand()%100 >= 50){
-            h = _horseHistory(MareId);
+        Horses.History memory h;
+        if(rand(0, 99) > 49){
+            h = horseHistory(mareId);
         }else{
-            h = _horseHistory(StallionId);
+            h = horseHistory(stallionId);
         }
 
-        int _N_RDNA = int(h.G1_Win * 10 + h.G2_Win * 5 + h.G3_Win * 3 + h.Normal_Win - h.Race_Lose)/10;
+        int _N_RDNA = int(h.G1_Win * 10 + h.G2_Win * 5 + h.G3_Win * 3 + h.normal_Win - h.race_Lose)/10;
         uint N_RDNA;
         if(_N_RDNA > 10){
             N_RDNA = 10;
@@ -405,101 +441,112 @@ contract horseContract is Manager, ERC721{
             N_RDNA = uint(_N_RDNA);
         }
 
-        uint8 RaceTimes = uint8(Random(11, 100));  //最後也要依照生成的RaceTimes值做能力修正
-        uint8 BreedingTimes;
+        uint8 raceTimes = uint8(rand(11, 100));  //最後也要依照生成的raceTimes值做能力修正
+        uint8 breedingTimes;
 
-        bool gender = Random(0, 9) > 4;
+        bool gender = rand(0, 9) > 4;
 
         if(gender){
-            BreedingTimes = uint8(Random(20, 100));
+            breedingTimes = uint8(rand(20, 100));
         }else{
-            BreedingTimes = uint8(Random(1, 10));
+            breedingTimes = uint8(rand(1, 10));
         }
 
-        ability memory a = ability(
+        Horses.Ability memory a = Horses.Ability(
             0, //Rank
-            uint8(N_DNA_Speed.add(uint8(Random(0, N_RDNA)))), //speed
-            uint8(N_DNA_Stamina.add(uint8(Random(0, N_RDNA)))), //stamina
-            uint8(Random(N_RDNA, 10)) //sprintForce
+            toUint8(N_DNA_Speed.add(rand(0, N_RDNA))), //speed
+            toUint8(N_DNA_Stamina.add(rand(0, N_RDNA))), //stamina
+            toUint8(rand(N_RDNA, 10)) //sprintForce
             );
-            //check(N_DNA_Speed, N_DNA_Stamina);
 
-        base memory b = base(
-            uint8(Random(1, 20)), //avatar
-            uint8(Random(1, 10)), //DNA1
-            uint8(Random(1, 10)), //DNA2
-            gender);
+        Horses.Base memory b = Horses.Base(
+            toUint8(rand(1, 20)), //avatar
+            toUint8(rand(1, 10)), //DNA1
+            toUint8(rand(1, 10)), //DNA2
+            gender
+            );
 
-        record memory r = record(0, StallionId, MareId, 0, false);
-        status memory s = status(RaceTimes, false, BreedingTimes, 0);
+        Horses.Record memory r = Horses.Record(stallionId, mareId, 0, false, 0);
+        Horses.Status memory s = Horses.Status(raceTimes, false, breedingTimes, 0, 0);
 
         _generateHorse(a, b, r, s);
     }
 
-    function _parent_speed(uint horseId) private view returns(uint speed){ //為避免計算過程溢出,故用uint
+    function _parent_speed(uint horseId) private view returns(uint speed){
         
-        uint speed_1 = (uint(10).sub(_horseBase(horseId).DNA2))
-            .mul(_horseAbility(horseId).speed).div(10);
+        uint speed_1 = (uint(10).sub(horseBase(horseId).DNA2))
+            .mul(horseAbility(horseId).speed).div(10);
 
-        uint speed_2 = Random(_horseBase(horseId).DNA2, _horseBase(horseId).DNA2 * 8);
+        uint speed_2 = rand(horseBase(horseId).DNA2, horseBase(horseId).DNA2 * 8);
         
         speed = speed_1.add(speed_2);
     }
 
-    function _parent_stamina(uint horseId) private view returns(uint stamina){ //為避免計算過程溢出,故用uint
+    function _parent_stamina(uint horseId) private view returns(uint stamina){
 
-        uint stamina_1 = uint(_horseBase(horseId).DNA2)
-        .mul(_horseAbility(horseId).stamina).div(10);
+        uint stamina_1 = uint(horseBase(horseId).DNA2)
+        .mul(horseAbility(horseId).stamina).div(10);
 
-        uint stamina_2 = Random(uint(10).sub(_horseBase(horseId).DNA2),
-            (uint(10).sub(_horseBase(horseId).DNA2))*8);
+        uint stamina_2 = rand(uint(10).sub(horseBase(horseId).DNA2),
+            (uint(10).sub(horseBase(horseId).DNA2))*8);
 
         stamina = stamina_1.add(stamina_2);
     }
 
-    function Breeding(uint MareId, uint StallionId) public{
-        require(_horseBase(MareId).gender == false, "MareId is not female horse");
-        require(_horseBase(StallionId).gender == true, "StallionId is not male horse");
-
-        require(ownerOf(MareId) != address(this) || ownerOf(MareId) != address(0),
+    function breeding(uint mareId, uint stallionId) public{
+        require(horseBase(mareId).gender == false, "mareId is not female horse");
+        require(horseBase(stallionId).gender == true, "stallionId is not male horse");
+        
+        require(ownerOf(mareId) != address(this) || ownerOf(mareId) != address(0),
             "owner of horse is not a player");
 
-        require(_horseStatus(MareId).IsRetire &&
-            _horseStatus(StallionId).IsRetire, "Not Both are retire");
-        require(_horseStatus(MareId).BreedingTimes > 0 &&
-            _horseStatus(StallionId).BreedingTimes > 0, "Not Both are breedable");
-        require(_horseStatus(MareId).BreedingCoolTime == 0 &&
-            _horseStatus(StallionId).BreedingCoolTime == 0, "Not Both are cooled");
+        require(horseStatus(mareId).isRetire &&
+            horseStatus(stallionId).isRetire, "Not Both are retire");
+        require(horseStatus(mareId).breedingTimes > 0 &&
+            horseStatus(stallionId).breedingTimes > 0, "Not Both are breedable");
+        require(horseStatus(mareId).breedingCoolTime == 0 &&
+            horseStatus(stallionId).breedingCoolTime == 0, "Not Both are cooled");
 
-        _CreateHorse(MareId, StallionId);
-        _set_status(horses[MareId], _horseStatus(MareId));
+        _createHorse(mareId, stallionId);
+
+        Horses.Status memory mare = horseStatus(mareId);
+        mare.breedingTimes = toUint8(uint(mare.breedingTimes).sub(1));
+        horses[mareId].set_status(mare);
+
+        Horses.Status memory stallion = horseStatus(stallionId);
+        stallion.breedingTimes = toUint8(uint(stallion.breedingTimes).sub(1));
+        horses[mareId].set_status(stallion);
     }
 
-    function BuyHorse(uint horseId) public payable{
-        require(msg.value == _horseRecord(horseId).SalePrice*(10**6), "Value is not match");
+    function buyHorse(uint horseId) public payable{
+        require(msg.value == horseRecord(horseId).salePrice*(1 trx), "Value is not match");
         _transferFrom(address(this), msg.sender, horseId);
-        record storage r = horses[horseId].r;
-        r.IsForSale = false;
-        r.SalePrice = _horseRecord(horseId).SalePrice.mul(3)/2;
-
     }
 
-    function setSalePrice(uint horseId, uint SalePrice) external{
-        require(ownerOf(horseId) == msg.sender, "You are not owner");
-        record memory r = _horseRecord(horseId);
-        r.SalePrice = SalePrice;
-        _set_record(horses[horseId], r);
+    function setHorse(uint horseId, uint salePrice, uint studFee) external onlyHorseOwner(horseId){
+        Horses.Record memory r = horseRecord(horseId);
+        if(salePrice == 0){
+            r.isForSale = false;
+        }else{
+            r.isForSale = true;
+        }
+        r.salePrice = salePrice;
+        r.studFee = studFee;
+        horses[horseId].set_record(r);
     }
 
-    function setRetire(uint horseId) external{
-        require(ownerOf(horseId) == msg.sender, "You are not owner");
-        status memory s = _horseStatus(horseId);
-        s.IsRetire = true;
-        _set_status(horses[horseId], s);
+    function setRetire(uint horseId) external onlyHorseOwner(horseId){
+        Horses.Status memory s = horseStatus(horseId);
+        s.isRetire = true;
+        horses[horseId].set_status(s);
     }
 
-    function setForSale(uint horseId, bool isForSale) external{
-        require(ownerOf(horseId) == msg.sender, "You are not owner");
-        horses[horseId].r.IsForSale = isForSale;
+    function training(uint horseId) external payable onlyHorseOwner(horseId){
+        uint exp = horses[horseId].status.exp;
+        uint rank = horses[horseId].ability.rank;
+        require(exp >= (rank.add(1)).mul(100), "Exp is not enough");
+        require(msg.value == (rank.add(1)).mul(100)*(1 trx), "Value is not enough");
+        _levelup(horseId);
     }
+
 }

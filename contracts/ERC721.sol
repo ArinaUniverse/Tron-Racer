@@ -67,7 +67,7 @@ library Address {
 }
 
 library Counters {
-    using SafeMath for uint256;
+    using uintTool for uint256;
 
     struct Counter {
         
@@ -118,7 +118,7 @@ contract ERC165 is IERC165 {
 }
 
 contract ERC721 is Context, ERC165, IERC721, math{
-    using SafeMath for uint256;
+    using uintTool for uint256;
     using Address for address;
     using Counters for Counters.Counter;
 

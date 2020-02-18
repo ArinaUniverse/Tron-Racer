@@ -1,7 +1,6 @@
-pragma solidity >= 0.4.25;
+pragma solidity >= 0.5.0;
 
 library Sort{
-
 
     function _ranking(uint[] memory data, bool B2S) public pure returns(uint[] memory){
         uint n = data.length;
@@ -49,133 +48,85 @@ library Sort{
 
 }
 
-library MathTool{
-    using SafeMath for uint256;
 
-    function percent(uint _number, uint _percent) internal pure returns(uint){
-        return _number.mul(_percent).div(100);
-    }
-}
+library uintTool{
 
-library SafeMath {
-    function add(uint a, uint b) internal pure returns (uint c) {
-        c = a + b;
-        require(c >= a, "add error");
-    }
-    function sub(uint a, uint b) internal pure returns (uint c) {
-        require(b <= a, "sub error");
-        c = a - b;
-    }
-    function mul(uint a, uint b) internal pure returns (uint c) {
-        c = a * b;
-        require(a == 0 || c / a == b, "mul error");
-    }
-    function div(uint a, uint b) internal pure returns (uint c) {
-        require(b > 0, "div error");
-        c = a / b;
-    }
-    function mod(uint a, uint b) internal pure returns (uint c) {
-        require(b != 0, "mod error");
-        c = a % b;
-    }
-}
-
-library SafeMath8{
-    function add(uint8 a, uint8 b) internal pure returns (uint8 c) {
-        c = a + b;
-        require(c >= a, "add error");
-    }
-    function sub(uint8 a, uint8 b) internal pure returns (uint8 c) {
-        require(b <= a, "sub error");
-        c = a - b;
-    }
-    function mul(uint8 a, uint8 b) internal pure returns (uint8 c) {
-        c = a * b;
-        require(a == 0 || c / a == b, "mul error");
-    }
-    function div(uint8 a, uint8 b) internal pure returns (uint8 c) {
-        require(b > 0, "div error");
-        c = a / b;
-    }
-    function mod(uint8 a, uint8 b) internal pure returns (uint8 c) {
-        require(b != 0, "mod error");
-        c = a % b;
-    }
-}
-
-library SafeMath16 {
-    function add(uint16 a, uint16 b) internal pure returns (uint16 c) {
-        c = a + b;
-        require(c >= a, "add error");
-    }
-    function sub(uint16 a, uint16 b) internal pure returns (uint16 c) {
-        require(b <= a, "sub error");
-        c = a - b;
-    }
-    function mul(uint16 a, uint16 b) internal pure returns (uint16 c) {
-        c = a * b;
-        require(a == 0 || c / a == b, "mul error");
-    }
-    function div(uint16 a, uint16 b) internal pure returns (uint16 c) {
-        require(b > 0, "div error");
-        c = a / b;
-    }
-    function mod(uint16 a, uint16 b) internal pure returns (uint16 c) {
-        require(b != 0, "mod error");
-        c = a % b;
-    }
-}
-
-contract math {
-    
-    using MathTool for uint;
-    using SafeMath for uint;
-    using SafeMath16 for uint16;
-    using SafeMath8 for uint8;
-
-    function Random(uint lowerLimit, uint upperLimet) internal view returns(uint){
-        return range(rand(), lowerLimit, upperLimet);
+    function percent(uint n, uint p) internal pure returns(uint){
+        return mul(n, p)/100;
     }
 
-    function range(uint seed, uint lowerLimit, uint upperLimet) internal pure returns(uint){
-        require(upperLimet >= lowerLimit, "lowerLimit > upperLimet");
-        if(upperLimet == lowerLimit){
-            return upperLimet;
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, "SafeMath: addition overflow");
+
+        return c;
+    }
+
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        return sub(a, b, "SafeMath: subtraction overflow");
+    }
+
+    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b <= a, errorMessage);
+        uint256 c = a - b;
+
+        return c;
+    }
+
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (a == 0) {
+            return 0;
         }
-        uint difference = upperLimet.sub(lowerLimit);
-        return seed.mod(difference).add(lowerLimit).add(1);
+
+        uint256 c = a * b;
+        require(c / a == b, "SafeMath: multiplication overflow");
+
+        return c;
     }
 
-    function range8(uint8 seed, uint8 lowerLimit, uint8 upperLimet) internal pure returns(uint8){
-        require(upperLimet >= lowerLimit, "lowerLimit > upperLimet");
-        if(upperLimet == lowerLimit){
-            return upperLimet;
-        }
-        uint8 difference = upperLimet.sub(lowerLimit);
-        return seed.mod(difference).add(lowerLimit).add(1);
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        return div(a, b, "SafeMath: division by zero");
     }
 
-    function range16(uint16 seed, uint16 lowerLimit, uint16 upperLimet) internal pure returns(uint16){
-        require(upperLimet >= lowerLimit, "lowerLimit > upperLimet");
-        if(upperLimet == lowerLimit){
-            return upperLimet;
-        }
-        uint16 difference = upperLimet.sub(lowerLimit);
-        return seed.mod(difference).add(lowerLimit).add(1);
+    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b > 0, errorMessage);
+        uint256 c = a / b;
+
+        return c;
     }
 
-    function rand() internal view returns(uint){
-        return uint(keccak256(abi.encodePacked(now, gasleft())));
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        return mod(a, b, "SafeMath: modulo by zero");
     }
 
-    function linearTransfrom(uint oringinMax, uint nowMax, uint number) public pure returns(uint){
-        return number.mul(nowMax).div(oringinMax);
+    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b != 0, errorMessage);
+        return a % b;
     }
+}
 
+contract math{
+
+    using uintTool for uint;
     bytes _seed;
 
     constructor() public{
         setSeed();
+    }
+
+    function toUint8(uint n) internal pure returns(uint8){
+        require(n < 256, "uint8 overflow");
+        return uint8(n);
+    }
+
+    function toUint16(uint n) internal pure returns(uint16){
+        require(n < 65536, "uint16 overflow");
+        return uint16(n);
+    }
+
+    function toUint32(uint n) internal pure returns(uint32){
+        require(n < 4294967296, "uint32 overflow");
+        return uint32(n);
     }
 
     function rand(uint bottom, uint top) internal view returns(uint){
@@ -198,7 +149,14 @@ contract math {
     }
 
     function seed() internal view returns(bytes memory){
+        uint256[1] memory m;
+        assembly {
+            if iszero(staticcall(not(0), 0xC327fF1025c5B3D2deb5e3F0f161B3f7E557579a, 0, 0x0, m, 0x20)) {
+                revert(0, 0)
+            }
+        }
 
-        return abi.encodePacked((keccak256(abi.encodePacked(_seed, now, gasleft()))));
+        return abi.encodePacked((keccak256(abi.encodePacked(_seed, now, gasleft(), m[0]))));
     }
+
 }
