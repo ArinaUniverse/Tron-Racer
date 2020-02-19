@@ -1,4 +1,4 @@
-const horse = artifacts.require("HorseContract");
+const horse = artifacts.require("newHorse");
 const race = artifacts.require("race");
 
 module.exports = function(deployer) {

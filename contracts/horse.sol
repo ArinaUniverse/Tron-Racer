@@ -49,7 +49,7 @@ library Horses {
         uint8 raceTimes; //可參與比賽次數,會隨每場比賽-1(initial:11~100)
         bool isRetire; //是否退役，初始值為false，選擇退役後則為true，退役後才能配種
         uint8 breedingTimes; //公馬、母馬可配種次數，歸零後便無法配種(initial:1~10)
-        uint8 breedingCoolTime; //配種冷卻時間，母馬配種後需24小時冷卻(公馬沒有冷卻時間)
+        uint breedingCoolTime; //配種冷卻時間，母馬配種後需24小時冷卻(公馬沒有冷卻時間)
         uint exp;
     }
 
@@ -225,6 +225,7 @@ contract newHorse is Manager, ERC721{
         Horses.Ability memory a = horseAbility(horseId);
         uint rateA = (uint(a.speed).mul(5)).add(uint(a.stamina).mul(2)).add(uint(a.sprintForce).mul(5)/10);
         bool isForSale = true;
+
         if(a.speed >= 80){
             salePrice = rateA.mul(6);
             isForSale = false;
@@ -238,7 +239,14 @@ contract newHorse is Manager, ERC721{
         }else{
             salePrice = rateA.mul(2);
         }
-        return Horses.Record(0, 0, salePrice, true, salePrice/10);
+        // bool gender = horseBase(horseId).gender;
+        // uint studFee;
+
+        // if(gender){
+        //     studFee = salePrice/10;
+        // }
+        
+        return Horses.Record(0, 0, salePrice, true, 0);
     }
 
     function _initStatus(uint horseId) private view returns(Horses.Status memory){
@@ -322,7 +330,7 @@ contract newHorse is Manager, ERC721{
     }
 
     function inqHorseStatus(uint horseId) external view returns
-    (uint8 raceTimes, bool isRetire, uint8 breedingTimes, uint8 breedingCoolTime, uint exp){
+    (uint8 raceTimes, bool isRetire, uint8 breedingTimes, uint breedingCoolTime, uint exp){
         Horses.Status memory s = horseStatus(horseId);
         return(s.raceTimes, s.isRetire, s.breedingTimes, s.breedingCoolTime, s.exp);
     }
@@ -494,11 +502,12 @@ contract newHorse is Manager, ERC721{
     }
 
     function breeding(uint mareId, uint stallionId) public{
+        require(ownerOf(mareId) == msg.sender, "You can't make they breed");
         require(horseBase(mareId).gender == false, "mareId is not female horse");
         require(horseBase(stallionId).gender == true, "stallionId is not male horse");
         
-        require(ownerOf(mareId) != address(this) || ownerOf(mareId) != address(0),
-            "owner of horse is not a player");
+        // require(ownerOf(mareId) != address(this) || ownerOf(mareId) != address(0),
+        //     "owner of horse is not a player");
 
         require(horseStatus(mareId).isRetire &&
             horseStatus(stallionId).isRetire, "Not Both are retire");
@@ -511,16 +520,29 @@ contract newHorse is Manager, ERC721{
 
         Horses.Status memory mare = horseStatus(mareId);
         mare.breedingTimes = toUint8(uint(mare.breedingTimes).sub(1));
+        mare.breedingCoolTime = mare.breedingCoolTime.add(86400);
         horses[mareId].set_status(mare);
 
         Horses.Status memory stallion = horseStatus(stallionId);
         stallion.breedingTimes = toUint8(uint(stallion.breedingTimes).sub(1));
+        stallion.breedingCoolTime = stallion.breedingCoolTime.add(86400);
         horses[mareId].set_status(stallion);
     }
 
     function buyHorse(uint horseId) public payable{
-        require(msg.value == horseRecord(horseId).salePrice*(1 trx), "Value is not match");
+        address payable to = address(uint160(ownerOf(horseId)));
+        Horses.Record memory r = horseRecord(horseId);
+
+        uint fee = 100 trx;
+        uint price = r.salePrice*(1 trx);
+        
+        require(r.isForSale, "This horse is not for sale");
+        require(msg.value == price.add(fee), "Value is not match");
+        require(horseId != 0, "You can't buy this horse");
         _transferFrom(address(this), msg.sender, horseId);
+        
+        horses[horseId].set_record(r);
+        to.transfer(price);
     }
 
     function setHorse(uint horseId, uint salePrice, uint studFee) external onlyHorseOwner(horseId){
@@ -542,11 +564,17 @@ contract newHorse is Manager, ERC721{
     }
 
     function training(uint horseId) external payable onlyHorseOwner(horseId){
-        uint exp = horses[horseId].status.exp;
-        uint rank = horses[horseId].ability.rank;
-        require(exp >= (rank.add(1)).mul(100), "Exp is not enough");
+        Horses.Status memory s = horseStatus(horseId);
+        Horses.Ability memory a = horseAbility(horseId);
+        uint rank = a.rank;
+
+        require(s.exp >= (rank.add(1)).mul(100), "Exp is not enough");
+
         require(msg.value == (rank.add(1)).mul(100)*(1 trx), "Value is not enough");
         _levelup(horseId);
+
+        horses[horseId].set_status(s);
+        horses[horseId].set_ability(a);
     }
 
 }
