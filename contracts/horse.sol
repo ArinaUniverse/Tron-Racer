@@ -234,7 +234,7 @@ contract newHorse is Manager, ERC721{
             salePrice = rateA.mul(2);
         }
         
-        return Horses.Record(0, 0, salePrice, true, 0);
+        return Horses.Record(0, 0, salePrice, isForSale, 0);
     }
 
     function _initStatus(uint horseId) private view returns(Horses.Status memory){
@@ -496,20 +496,20 @@ contract newHorse is Manager, ERC721{
             horseStatus(stallionId).isRetire, "Not Both are retire");
         require(horseStatus(mareId).breedingTimes > 0 &&
             horseStatus(stallionId).breedingTimes > 0, "Not Both are breedable");
-        require(horseStatus(mareId).breedingCoolTime == 0 &&
-            horseStatus(stallionId).breedingCoolTime == 0, "Not Both are cooled");
+        require(horseStatus(mareId).breedingCoolTime <= now &&
+            horseStatus(stallionId).breedingCoolTime <= now, "Not Both are cooled");
 
         _createHorse(mareId, stallionId);
 
         Horses.Status memory mare = horseStatus(mareId);
         mare.breedingTimes = toUint8(uint(mare.breedingTimes).sub(1));
-        mare.breedingCoolTime = mare.breedingCoolTime.add(86400);
+        mare.breedingCoolTime = now.add(86400);
         horses[mareId].set_status(mare);
 
         Horses.Status memory stallion = horseStatus(stallionId);
         stallion.breedingTimes = toUint8(uint(stallion.breedingTimes).sub(1));
-        stallion.breedingCoolTime = stallion.breedingCoolTime.add(86400);
-        horses[mareId].set_status(stallion);
+        stallion.breedingCoolTime = now.add(86400);
+        horses[stallionId].set_status(stallion);
     }
 
     function buyHorse(uint horseId) public payable{
@@ -532,8 +532,13 @@ contract newHorse is Manager, ERC721{
         }
     }
 
-    function setHorse(uint horseId, uint salePrice, uint studFee) external onlyHorseOwner(horseId){
+    function setHorse(uint horseId, uint salePrice, uint studFee) external {
         Horses.Record memory r = horseRecord(horseId);
+
+        if(msg.sender != manager){
+            require(ownerOf(horseId) == msg.sender, "You are not owner of the horse");
+        }
+
         if(salePrice == 0){
             r.isForSale = false;
         }else{
@@ -544,7 +549,12 @@ contract newHorse is Manager, ERC721{
         horses[horseId].set_record(r);
     }
 
-    function setRetire(uint horseId) external onlyHorseOwner(horseId){
+    function setRetire(uint horseId) external{
+
+        if(msg.sender != manager){
+            require(ownerOf(horseId) == msg.sender, "You are not owner of the horse");
+        }
+
         Horses.Status memory s = horseStatus(horseId);
         s.isRetire = true;
         horses[horseId].set_status(s);
