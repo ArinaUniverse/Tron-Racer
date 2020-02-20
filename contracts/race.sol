@@ -81,8 +81,8 @@ contract race is race_base{
 //=========================Play game function======================
 
     function generateRace(uint trackLength, uint horseId) external{
-        (, bool IsRetire, uint8 BreedingTimes,,) = inqHorseStatus(horseId);
-        require(!IsRetire || BreedingTimes >= 0, "This horse can't join race");
+        (, bool IsRetire, uint8 raceTimes,,) = inqHorseStatus(horseId);
+        require(!IsRetire && raceTimes >= 0, "This horse can't join race");
         require((ownerOf(horseId) == msg.sender) || (horseId == 0), "You can't use this horse");
         uint distance;
         if(trackLength == 1){
@@ -98,9 +98,6 @@ contract race is race_base{
         }
 
         uint[] memory newHorses = new uint[](8);
-        // horsesTime[msg.sender].set(1, newHorses);
-        // horsesTime[msg.sender].set(2, newHorses);
-        // horsesTime[msg.sender].set(3, newHorses);
         horsesTime[msg.sender].init;
 
         uint r = rand(0, 7);
@@ -136,8 +133,6 @@ contract race is race_base{
     }
  
     function endGame() external{ //需要重置避免重複調用
-        // horsesTime[msg.sender].set(2, _calculateTime(msg.sender, 2));
-        // horsesTime[msg.sender].set(3, _calculateTime(msg.sender, 3));
         
         uint winer = inqResult(msg.sender)[0];
 

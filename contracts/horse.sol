@@ -94,12 +94,6 @@ library Horses {
         h.status = status;
     }
 
-    // function set_history(Horse storage h, History memory history) internal{
-    //     if(!h.initial.status){
-    //         h.initial.status = true;
-    //     }
-    //     h.history = history;
-    // }
 }
 
 /*====================================================================================
@@ -239,12 +233,6 @@ contract newHorse is Manager, ERC721{
         }else{
             salePrice = rateA.mul(2);
         }
-        // bool gender = horseBase(horseId).gender;
-        // uint studFee;
-
-        // if(gender){
-        //     studFee = salePrice/10;
-        // }
         
         return Horses.Record(0, 0, salePrice, true, 0);
     }
@@ -352,9 +340,17 @@ contract newHorse is Manager, ERC721{
         Horses.Status memory hs = horseStatus(horseId);
         
         if(horseAbility(horseId).speed >= 70){
-            hs.raceTimes = toUint8(uint(hs.raceTimes).sub(2));
+            if(hs.raceTimes > 2){
+                hs.raceTimes = toUint8(uint(hs.raceTimes).sub(2));
+            }else{
+                hs.raceTimes = 0;
+            }
         }else{
-            hs.raceTimes = toUint8(uint(hs.raceTimes).sub(1));
+            if(hs.raceTimes > 1){
+                hs.raceTimes = toUint8(uint(hs.raceTimes).sub(1));
+            }else{
+                hs.raceTimes = 0;
+            }
         }//扣除RaceTimes
 
         horses[horseId].set_status(hs);
@@ -385,24 +381,6 @@ contract newHorse is Manager, ERC721{
         }
     }
 
-    function _levelup(uint horseId) private{
-        Horses.Ability memory a = horseAbility(horseId);
-        if(a.rank < 50){
-            uint r = rand(1,3);
-            if(r == 0){
-                horses[horseId].set_ability(Horses.Ability(
-                    toUint8(uint(a.rank).add(1)), toUint8(uint(a.speed).add(1)), a.stamina, a.sprintForce));
-            }else if(r == 1){
-                horses[horseId].set_ability(Horses.Ability(
-                    toUint8(uint(a.rank).add(1)), a.speed, toUint8(uint(a.stamina).add(1)), a.sprintForce));
-            }else if(r == 2){
-                horses[horseId].set_ability(Horses.Ability(
-                    toUint8(uint(a.rank).add(1)), a.speed, a.stamina, toUint8(uint(a.sprintForce).add(1))));
-            }else{
-                revert("rand error");
-            }
-        }
-    }
 
 // ///////////////////////////other function///////////////////////////////
 
@@ -501,11 +479,16 @@ contract newHorse is Manager, ERC721{
         stamina = stamina_1.add(stamina_2);
     }
 
-    function breeding(uint mareId, uint stallionId) public{
+    function breeding(uint mareId, uint stallionId) public payable{
         require(ownerOf(mareId) == msg.sender, "You can't make they breed");
         require(horseBase(mareId).gender == false, "mareId is not female horse");
         require(horseBase(stallionId).gender == true, "stallionId is not male horse");
-        
+
+        Horses.Record memory r = horseRecord(stallionId);
+        uint price = r.studFee*(1 trx);
+        uint fee = 100 trx;
+        require(msg.value == price.add(fee), "Value is not match");
+
         // require(ownerOf(mareId) != address(this) || ownerOf(mareId) != address(0),
         //     "owner of horse is not a player");
 
@@ -533,16 +516,20 @@ contract newHorse is Manager, ERC721{
         address payable to = address(uint160(ownerOf(horseId)));
         Horses.Record memory r = horseRecord(horseId);
 
-        uint fee = 100 trx;
         uint price = r.salePrice*(1 trx);
         
         require(r.isForSale, "This horse is not for sale");
-        require(msg.value == price.add(fee), "Value is not match");
+
+        require(msg.value == price, "Value is not match");
         require(horseId != 0, "You can't buy this horse");
         _transferFrom(address(this), msg.sender, horseId);
+
+        r.isForSale = false;
         
         horses[horseId].set_record(r);
-        to.transfer(price);
+        if(to != address(this)){
+            to.transfer(price);
+        }
     }
 
     function setHorse(uint horseId, uint salePrice, uint studFee) external onlyHorseOwner(horseId){
@@ -566,15 +553,39 @@ contract newHorse is Manager, ERC721{
     function training(uint horseId) external payable onlyHorseOwner(horseId){
         Horses.Status memory s = horseStatus(horseId);
         Horses.Ability memory a = horseAbility(horseId);
-        uint rank = a.rank;
 
-        require(s.exp >= (rank.add(1)).mul(100), "Exp is not enough");
+        uint ra = (uint(a.rank).add(1)).mul(100);
 
-        require(msg.value == (rank.add(1)).mul(100)*(1 trx), "Value is not enough");
-        _levelup(horseId);
+        require(s.exp >= ra, "Exp is not enough");
+        s.exp = s.exp.sub(ra);
+
+        require(msg.value == ra*(1 trx), "Value is not enough");
 
         horses[horseId].set_status(s);
-        horses[horseId].set_ability(a);
+        _levelup(horseId);
+    }
+
+    function _levelup(uint horseId) private{
+        Horses.Ability memory a = horseAbility(horseId);
+
+        if(a.rank < 50){
+            uint r = rand(0, 2);
+            a.rank = toUint8(uint(a.rank).add(1));
+
+            if(r == 0){
+                a.speed = toUint8(uint(a.speed).add(1));
+            }else if(r == 1){
+                a.stamina = toUint8(uint(a.stamina).add(1));
+            }else if(r == 2){
+                a.sprintForce = toUint8(uint(a.sprintForce).add(1));
+            }else{
+                revert("rand error");
+            }
+
+            horses[horseId].set_ability(a);
+        }else{
+            revert("Level of this horse is max");
+        }
     }
 
 }
